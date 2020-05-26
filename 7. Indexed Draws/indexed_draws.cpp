@@ -34,11 +34,6 @@ void main() {\n\
 
 GLuint VAO, VBO, IBO, shader, uniformModel;
 
-enum TranslationState {
-    STATE_GOING_RIGHT,
-    STATE_GOING_LEFT
-};
-
 void AddShader(GLuint theProgram, const char *shaderCode, GLenum shaderType)
 {
     GLuint theShader = glCreateShader(shaderType);
@@ -167,8 +162,7 @@ int main(void)
     CreateTriangle();
     CompileShaders();
     
-    enum TranslationState state = STATE_GOING_RIGHT;
-    float xOffset = 0, angle = 0;
+    float angle = 0;
     while (!glfwWindowShouldClose(mainWindow)) {
         // Get + Handle user input events
         glfwPollEvents();
@@ -177,27 +171,13 @@ int main(void)
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if(state == STATE_GOING_RIGHT)
-            xOffset += 0.005f;
-        else
-            xOffset -= 0.005f;
-
-        if(abs(xOffset) >= 0.7f) {
-            if(state == STATE_GOING_LEFT)
-                state = STATE_GOING_RIGHT;
-            else
-                state = STATE_GOING_LEFT;
-        }
-
         angle += 0.5f;
         if(angle >= 360)
             angle = 0;
         glUseProgram(shader);
 
         glm::mat4 model{1.0f};
-        //model = glm::translate(model, glm::vec3(xOffset, 0.0f, 0.0f));
         model = glm::rotate(model, angle*pi/180, glm::vec3(0.0f, 1.0f, 0.0f));
-        // Model = TR - note the order (first rotate, then translate)!!
 
         glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
         glBindVertexArray(VAO);
