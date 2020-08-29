@@ -10,87 +10,17 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Mesh.hpp"
+#include "Shader.hpp"
 
 const int WIDTH = 800, HEIGHT = 600;
 const float pi = 3.14159265358979323846f;
 
-static const char *vShader =
-"#version 450\n\
-layout(location = 0) in vec3 pos;\n\
-out vec4 vCol;\n\
-uniform mat4 model;\n\
-\
-void main() {\n\
-    gl_Position = model * vec4(pos.x * 0.4, pos.y * 0.4, pos.z, 1.0);\n\
-    vCol = vec4(clamp(pos, 0.0, 1.0), 1.0);\n\
-}";
+static const char *vShader = "vertexShader.glsl";
 
-static const char *fShader =
-"#version 450\n\
-out vec4 color;\n\
-in vec4 vCol;\n\
-\
-void main() {\n\
-    color = vCol;\n\
-}";
-
-GLuint shader, uniformModel;
+static const char *fShader = "fragmentShader.glsl";
 
 std::vector<Mesh *> meshList;
-
-void AddShader(GLuint theProgram, const char *shaderCode, GLenum shaderType)
-{
-    GLuint theShader = glCreateShader(shaderType);
-
-    const GLchar **theCode = &shaderCode;
-    const GLint codeLength = strlen(shaderCode);
-    glShaderSource(theShader, 1, theCode, &codeLength);
-    glCompileShader(theShader);
-
-    GLint result = 0;
-    GLchar elog[1024] = { 0 };
-    glGetShaderiv(theShader, GL_COMPILE_STATUS, &result);
-    if(!result) {
-        glGetShaderInfoLog(theShader, sizeof(elog), NULL, elog);
-        std::cout << "Error compiling" << shaderType << "shader : " << elog << std::endl;
-        return;
-    }
-
-    glAttachShader(theProgram, theShader);
-}
-
-void CompileShaders()
-{
-    shader = glCreateProgram();
-    if(!shader) {
-        std::cout << "Error creating shader program!" << std::endl;
-        return;
-    }
-
-    AddShader(shader, vShader, GL_VERTEX_SHADER);
-    AddShader(shader, fShader, GL_FRAGMENT_SHADER);
-
-    GLint result = 0;
-    GLchar elog[1024] = { 0 };
-
-    glLinkProgram(shader);
-    glGetProgramiv(shader, GL_LINK_STATUS, &result);
-    if(!result) {
-        glGetProgramInfoLog(shader, sizeof(elog), NULL, elog);
-        std::cout << "Error linking shader : " << elog << std::endl;
-        return;
-    }
-
-    glValidateProgram(shader);
-    glGetProgramiv(shader, GL_VALIDATE_STATUS, &result);
-    if(!result) {
-        glGetProgramInfoLog(shader, sizeof(elog), NULL, elog);
-        std::cout << "Error validating shader : " << elog << std::endl;
-        return;
-    }
-
-    uniformModel = glGetUniformLocation(shader, "model");
-}
+std::vector<Shader *> shaderList;
 
 void CreateTriangle()
 {
@@ -115,6 +45,13 @@ void CreateTriangle()
     Mesh *obj2 = new Mesh();
     obj2->CreateMesh(vertices, indices, 12, 12);
     meshList.push_back(obj2);
+}
+
+void CreateShaders()
+{
+    Shader *shader = new Shader();
+    shader->CreateFromFiles(vShader, fShader);
+    shaderList.push_back(shader);
 }
 
 int main(void)
@@ -153,9 +90,11 @@ int main(void)
     glEnable(GL_DEPTH_TEST);
 
     CreateTriangle();
-    CompileShaders();
+    CreateShaders();
 
     float angle = 0;
+    GLuint uniformModel = 0;
+
     while (!glfwWindowShouldClose(mainWindow)) {
         // Get + Handle user input events
         glfwPollEvents();
@@ -167,7 +106,9 @@ int main(void)
         angle += 0.5f;
         if(angle >= 360)
             angle = 0;
-        glUseProgram(shader);
+
+        shaderList[0]->UseShader();
+        uniformModel = shaderList[0]->GetModelLocation();
 
         glm::mat4 model{1.0f};
         model = glm::rotate(model, angle*pi/180, glm::vec3(0.0f, 1.0f, 0.0f));
